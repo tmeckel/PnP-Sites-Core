@@ -101,6 +101,13 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                         return parser;
                     }
 
+                    // Check if this is not a noscript site as navigation features are not supported
+                    if (web.IsNoScriptSite())
+                    {
+                        scope.LogWarning(CoreResources.Provisioning_ObjectHandlers_Navigation_SkipProvisioning);
+                        return parser;
+                    }
+
                     // Retrieve the current web navigation settings
                     var navigationSettings = new WebNavigationSettings(web.Context, web);
                     web.Context.Load(navigationSettings, ns => ns.CurrentNavigation, ns => ns.GlobalNavigation);
@@ -112,6 +119,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                         {
                             case GlobalNavigationType.Inherit:
                                 navigationSettings.GlobalNavigation.Source = StandardNavigationSource.InheritFromParentWeb;
+                                web.Navigation.UseShared = true;
                                 break;
                             case GlobalNavigationType.Managed:
                                 if (template.Navigation.GlobalNavigation.ManagedNavigation == null)

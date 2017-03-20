@@ -15,6 +15,7 @@ using OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers.TokenDefinitions;
 using Microsoft.SharePoint.Client.Taxonomy;
 using System.Text.RegularExpressions;
 using OfficeDevPnP.Core.Utilities;
+using Microsoft.SharePoint.Client.WebParts;
 
 namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
 {
@@ -141,6 +142,8 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                             currentListIndex = 0;
                             foreach (var fieldRef in listInfo.TemplateList.FieldRefs)
                             {
+                                scope.LogDebug(CoreResources.Provisioning_ObjectHandlers_ListInstances_FieldRef_Updating_list__0_, listInfo.TemplateList.Title, fieldRef.Name);
+
                                 currentListIndex++;
                                 WriteMessage($"Site Columns for list {listInfo.TemplateList.Title}|{fieldRef.Name}|{currentListIndex}|{total}", ProvisioningMessageType.Progress);
                                 var field = rootWeb.GetFieldById(fieldRef.Id);
@@ -549,8 +552,17 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                     {
                         createdView.JSLink = jslink;
                         createdView.Update();
+
+                        // Only push the JSLink value to the web part as it contains a / indicating it's a custom one. So we're not pushing the OOB ones like clienttemplates.js or hierarchytaskslist.js
+                        // but do push custom ones down to th web part (e.g. ~sitecollection/Style Library/JSLink-Samples/ConfidentialDocuments.js)
+                        if (jslink.Contains("/"))
+                        {
+                            createdView.EnsureProperty(v => v.ServerRelativeUrl);
+                            createdList.SetJSLinkCustomizations(createdView.ServerRelativeUrl, jslink);
+                        }
                     }
                 }
+                
 
                 createdList.Update();
                 web.Context.ExecuteQueryRetry();
