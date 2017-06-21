@@ -2021,11 +2021,17 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
         {
             if (!_willExtract.HasValue)
             {
-                var collList = web.Lists;
-                var lists = web.Context.LoadQuery(collList.Where(l => l.Hidden == false || creationInfo.IncludeHiddenObjects ));
-
+                IEnumerable<List> lists;
+                if (creationInfo.IncludeHiddenObjects)
+                {
+                    web.Context.Load(web.Lists);
+                    lists = web.Lists.AsEnumerable();
+                }
+                else
+                {
+                    lists = web.Context.LoadQuery(web.Lists.Where(l => l.Hidden == false));
+                }
                 web.Context.ExecuteQueryRetry();
-
                 _willExtract = lists.Any();
             }
             return _willExtract.Value;
