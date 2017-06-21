@@ -362,7 +362,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
 
                     #endregion
 
-                    // If an existing view is updated, and the list is to be listed on the QuickLaunch, it is removed because the existing view will be deleted and recreated from scratch. 
+                    // If an existing view is updated, and the list is to be listed on the QuickLaunch, it is removed because the existing view will be deleted and recreated from scratch.
                     foreach (var listInfo in processedLists)
                     {
                         listInfo.SiteList.OnQuickLaunch = listInfo.TemplateList.OnQuickLaunch;
@@ -446,7 +446,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                     SetAsDefaultView = viewDefault,
                 };
 
-                // Allow to specify a custom view url. View url is taken from title, so we first set title to the view url value we need, 
+                // Allow to specify a custom view url. View url is taken from title, so we first set title to the view url value we need,
                 // create the view and then set title back to the original value
                 var urlAttribute = viewElement.Attribute("Url");
                 var urlHasValue = urlAttribute != null && !string.IsNullOrEmpty(urlAttribute.Value);
@@ -462,7 +462,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
 
                 if (urlHasValue)
                 {
-                    //restore original title 
+                    //restore original title
                     createdView.Title = viewTitle;
                     createdView.Update();
                 }
@@ -562,7 +562,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                         }
                     }
                 }
-                
+
 
                 createdList.Update();
                 web.Context.ExecuteQueryRetry();
@@ -617,7 +617,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
             }
 #endif
 
-            // We cannot configure Hidden property for Phonetic fields 
+            // We cannot configure Hidden property for Phonetic fields
             if (!(siteList.BaseTemplate == (int)ListTemplateType.Contacts &&
                 (fieldRef.Name.Equals("LastNamePhonetic", StringComparison.InvariantCultureIgnoreCase) ||
                 fieldRef.Name.Equals("FirstNamePhonetic", StringComparison.InvariantCultureIgnoreCase) ||
@@ -1118,7 +1118,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                                 }
                                 else
                                 {
-                                    // Otherwise we update it, and before we force the target 
+                                    // Otherwise we update it, and before we force the target
                                     // registration type and ID to avoid issues
                                     userCustomAction.RegistrationType = UserCustomActionRegistrationType.List;
                                     userCustomAction.RegistrationId = existingList.Id.ToString("B").ToUpper();
@@ -1184,8 +1184,8 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                         }
                     }
 
-                    // default ContentTypeBinding should be set last because 
-                    // list extension .SetDefaultContentTypeToList() re-sets 
+                    // default ContentTypeBinding should be set last because
+                    // list extension .SetDefaultContentTypeToList() re-sets
                     // the list.RootFolder UniqueContentTypeOrder property
                     // which may cause missing CTs from the "New Button"
                     if (defaultCtBinding != null)
@@ -1430,8 +1430,8 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                     }
                 }
 
-                // default ContentTypeBinding should be set last because 
-                // list extension .SetDefaultContentTypeToList() re-sets 
+                // default ContentTypeBinding should be set last because
+                // list extension .SetDefaultContentTypeToList() re-sets
                 // the list.RootFolder UniqueContentTypeOrder property
                 // which may cause missing CTs from the "New Button"
                 if (defaultCtBinding != null)
@@ -1587,12 +1587,12 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 }
                 catch (ServerException)
                 {
-                    // If there is no workflow service present in the farm this method will throw an error. 
+                    // If there is no workflow service present in the farm this method will throw an error.
                     // Swallow the exception
                 }
 
                 // Retrieve all not hidden lists and the Workflow History Lists, just in case there are active workflow subscriptions
-                var listsToProcess = lists.AsEnumerable().Where(l => (l.Hidden == false || ((workflowSubscriptions != null && workflowSubscriptions.Length > 0) && l.BaseTemplate == 140))).ToArray();
+                var listsToProcess = lists.AsEnumerable().Where(l => ((l.Hidden == false || creationInfo.IncludeHiddenObjects) || ((workflowSubscriptions != null && workflowSubscriptions.Length > 0) && l.BaseTemplate == 140))).ToArray();
                 var listCount = 0;
                 foreach (var siteList in listsToProcess)
                 {
@@ -1723,7 +1723,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 {
                     // Removed this - so that we are getting full list of content types and if it's oob content type,
                     // We are taking parent - VesaJ.
-                    //if (!BuiltInContentTypeId.Contains(ct.Parent.StringId)) 
+                    //if (!BuiltInContentTypeId.Contains(ct.Parent.StringId))
                     //{
 
                     // Exclude System Content Type to prevent getting exception during import
@@ -2022,7 +2022,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
             if (!_willExtract.HasValue)
             {
                 var collList = web.Lists;
-                var lists = web.Context.LoadQuery(collList.Where(l => l.Hidden == false));
+                var lists = web.Context.LoadQuery(collList.Where(l => l.Hidden == false || creationInfo.IncludeHiddenObjects ));
 
                 web.Context.ExecuteQueryRetry();
 

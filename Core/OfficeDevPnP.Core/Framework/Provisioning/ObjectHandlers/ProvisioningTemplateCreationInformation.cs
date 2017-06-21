@@ -18,6 +18,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
         private bool includeSiteGroups = false;
         private bool includeTermGroupsSecurity = false;
         private bool includeSearchConfiguration = false;
+        private bool includeHiddenObjects = false;
         private List<String> propertyBagPropertiesToPreserve;
         private List<String> contentTypeGroupsToInclude;
         private bool persistPublishingFiles = false;
@@ -94,7 +95,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
         }
 
         /// <summary>
-        /// Do composed look files (theme files, site logo, alternate css) need to be persisted to storage when 
+        /// Do composed look files (theme files, site logo, alternate css) need to be persisted to storage when
         /// we're "getting" a template
         /// </summary>
         [Obsolete("Use PersistBrandingFiles instead")]
@@ -151,7 +152,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 this.includeNativePublishingFiles = value;
             }
         }
-        
+
         public bool IncludeAllTermGroups
         {
             get
@@ -202,6 +203,18 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
             set
             {
                 this.includeSearchConfiguration = value;
+            }
+        }
+
+        public bool IncludeHiddenObjects
+        {
+            get
+            {
+                return this.includeHiddenObjects;
+            }
+            set
+            {
+                this.includeHiddenObjects = value;
             }
         }
 
