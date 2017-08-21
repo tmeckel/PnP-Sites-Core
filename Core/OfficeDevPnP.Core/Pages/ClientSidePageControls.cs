@@ -160,6 +160,48 @@ namespace OfficeDevPnP.Core.Pages
         }
 
         /// <summary>
+        /// Moves the control to another zone and section
+        /// </summary>
+        /// <param name="newZone">New zone that will host the control</param>
+        public void Move(CanvasZone newZone)
+        {
+            this.zone = newZone;
+            this.section = newZone.DefaultSection;
+        }
+
+        /// <summary>
+        /// Moves the control to another zone and section
+        /// </summary>
+        /// <param name="newZone">New zone that will host the control</param>
+        /// <param name="order">New order for the control in the new zone</param>
+        public void Move(CanvasZone newZone, int order)
+        {
+            Move(newZone);
+            this.order = order;
+        }
+
+        /// <summary>
+        /// Moves the control to another zone and section
+        /// </summary>
+        /// <param name="newSection">New section that will host the control</param>
+        public void Move(CanvasSection newSection)
+        {
+            this.zone = newSection.Zone;
+            this.section = newSection;
+        }
+
+        /// <summary>
+        /// Moves the control to another zone and section
+        /// </summary>
+        /// <param name="newSection">New section that will host the control</param>
+        /// <param name="order">New order for the control in the new zone</param>
+        public void Move(CanvasSection newSection, int order)
+        {
+            Move(newSection);
+            this.order = order;
+        }
+
+        /// <summary>
         /// Receives "data-sp-controldata" content and detects the type of the control
         /// </summary>
         /// <param name="controlDataJson">data-sp-controldata json string</param>
@@ -342,7 +384,16 @@ namespace OfficeDevPnP.Core.Pages
 
             var div = element.GetElementsByTagName("div").Where(a => a.HasAttribute(TextRteAttribute)).FirstOrDefault();
             this.rte = div.GetAttribute(TextRteAttribute);
-            this.Text = div.InnerHtml;
+
+            // By default text is wrapped in a Paragraph, need to drop it to avoid getting multiple paragraphs on page edits
+            if ((div.FirstChild as IElement).TagName.Equals("P", StringComparison.InvariantCultureIgnoreCase))
+            {
+                this.Text = (div.FirstChild as IElement).InnerHtml;
+            }
+            else
+            {
+                this.Text = div.InnerHtml;
+            }
 
             // load data from the data-sp-controldata attribute
             var jsonSerializerSettings = new JsonSerializerSettings()
@@ -664,7 +715,8 @@ namespace OfficeDevPnP.Core.Pages
             JObject wpJObject = JObject.Parse(decoded);
             this.title = wpJObject["title"] != null ? wpJObject["title"].Value<string>() : "";
             this.description = wpJObject["description"] != null ? wpJObject["description"].Value<string>() : "";
-            this.propertiesJson = wpJObject["properties"].ToString(Formatting.None);
+            // Set property to trigger correct loading of properties 
+            this.PropertiesJson = wpJObject["properties"].ToString(Formatting.None);
             this.webPartId = wpJObject["id"].Value<string>();
 
             var wpHtmlProperties = wpDiv.GetElementsByTagName("div").Where(a => a.HasAttribute(ClientSideWebPart.WebPartHtmlPropertiesAttribute)).FirstOrDefault();

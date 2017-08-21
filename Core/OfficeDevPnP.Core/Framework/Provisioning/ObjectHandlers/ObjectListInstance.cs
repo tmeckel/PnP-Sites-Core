@@ -305,8 +305,6 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
 
                     #region Views
 
-
-
                     foreach (var listInfo in processedLists)
                     {
 
@@ -363,6 +361,43 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                     #endregion
 
                     // If an existing view is updated, and the list is to be listed on the QuickLaunch, it is removed because the existing view will be deleted and recreated from scratch.
+                    #region IRM Settings
+
+                    // Configure IRM Settings
+                    foreach (var list in processedLists)
+                    {
+                        if (list.SiteList.BaseTemplate != (int)ListTemplateType.PictureLibrary && list.TemplateList.IRMSettings != null && list.TemplateList.IRMSettings.Enabled)
+                        {
+                            list.SiteList.IrmEnabled = true;
+                            list.SiteList.IrmExpire = list.TemplateList.IrmExpire;
+                            list.SiteList.IrmReject = list.TemplateList.IrmReject;
+
+                            list.SiteList.InformationRightsManagementSettings.AllowPrint = list.TemplateList.IRMSettings.AllowPrint;
+                            list.SiteList.InformationRightsManagementSettings.AllowScript = list.TemplateList.IRMSettings.AllowScript;
+                            list.SiteList.InformationRightsManagementSettings.AllowWriteCopy = list.TemplateList.IRMSettings.AllowWriteCopy;
+                            list.SiteList.InformationRightsManagementSettings.DisableDocumentBrowserView = list.TemplateList.IRMSettings.DisableDocumentBrowserView;
+                            list.SiteList.InformationRightsManagementSettings.DocumentAccessExpireDays = list.TemplateList.IRMSettings.DocumentAccessExpireDays;
+                            if (list.TemplateList.IRMSettings.DocumentLibraryProtectionExpiresInDays > 0)
+                            {
+                                list.SiteList.InformationRightsManagementSettings.DocumentLibraryProtectionExpireDate = DateTime.Now.AddDays(list.TemplateList.IRMSettings.DocumentLibraryProtectionExpiresInDays);
+                            }
+                            list.SiteList.InformationRightsManagementSettings.EnableDocumentAccessExpire = list.TemplateList.IRMSettings.EnableDocumentAccessExpire;
+                            list.SiteList.InformationRightsManagementSettings.EnableDocumentBrowserPublishingView = list.TemplateList.IRMSettings.EnableDocumentBrowserPublishingView;
+                            list.SiteList.InformationRightsManagementSettings.EnableGroupProtection = list.TemplateList.IRMSettings.EnableGroupProtection;
+                            list.SiteList.InformationRightsManagementSettings.EnableLicenseCacheExpire = list.TemplateList.IRMSettings.EnableLicenseCacheExpire;
+                            list.SiteList.InformationRightsManagementSettings.GroupName = list.TemplateList.IRMSettings.GroupName;
+                            list.SiteList.InformationRightsManagementSettings.LicenseCacheExpireDays = list.TemplateList.IRMSettings.LicenseCacheExpireDays;
+                            list.SiteList.InformationRightsManagementSettings.PolicyDescription = list.TemplateList.IRMSettings.PolicyDescription;
+                            list.SiteList.InformationRightsManagementSettings.PolicyTitle = list.TemplateList.IRMSettings.PolicyTitle;
+
+                            list.SiteList.Update();
+                            web.Context.ExecuteQueryRetry();
+                        }
+                    }
+
+                    #endregion
+
+                    // If an existing view is updated, and the list is to be listed on the QuickLaunch, it is removed because the existing view will be deleted and recreated from scratch. 
                     foreach (var listInfo in processedLists)
                     {
                         listInfo.SiteList.OnQuickLaunch = listInfo.TemplateList.OnQuickLaunch;
@@ -913,6 +948,17 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 l => l.EnableModeration,
                 l => l.EnableMinorVersions,
                 l => l.ForceCheckout,
+                l => l.DefaultDisplayFormUrl,
+                l => l.DefaultEditFormUrl,
+                l => l.DefaultNewFormUrl,
+                l => l.IsApplicationList,
+                l => l.Direction,
+                l => l.ImageUrl,
+                l => l.IrmExpire,
+                l => l.IrmReject,
+                l => l.IrmEnabled,
+                l => l.ValidationFormula,
+                l => l.ValidationMessage,
                 l => l.DraftVersionVisibility,
                 l => l.Views,
                 l => l.DocumentTemplateUrl,
@@ -922,6 +968,10 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
 #if !SP2013
 , l => l.MajorWithMinorVersionsLimit
 , l => l.MajorVersionLimit
+#endif
+#if !ONPREMISES
+, l => l.ListExperienceOptions
+, l => l.ReadSecurity
 #endif
 );
             web.Context.ExecuteQueryRetry();
@@ -963,12 +1013,169 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                     existingList.OnQuickLaunch = templateList.OnQuickLaunch;
                     isDirty = true;
                 }
+                if (templateList.DefaultDisplayFormUrl != null && parser.ParseString(templateList.DefaultDisplayFormUrl) != existingList.DefaultDisplayFormUrl)
+                {
+                    existingList.DefaultDisplayFormUrl = parser.ParseString(templateList.DefaultDisplayFormUrl);
+                    isDirty = true;
+                }
+                if (templateList.DefaultEditFormUrl != null && parser.ParseString(templateList.DefaultEditFormUrl) != existingList.DefaultEditFormUrl)
+                {
+                    existingList.DefaultEditFormUrl = parser.ParseString(templateList.DefaultEditFormUrl);
+                    isDirty = true;
+                }
+                if (templateList.DefaultNewFormUrl != null && parser.ParseString(templateList.DefaultNewFormUrl) != existingList.DefaultNewFormUrl)
+                {
+                    existingList.DefaultNewFormUrl = parser.ParseString(templateList.DefaultNewFormUrl);
+                    isDirty = true;
+                }
+                if (existingList.Direction == "none" && templateList.Direction != ListReadingDirection.None)
+                {
+                    existingList.Direction = templateList.Direction == ListReadingDirection.None ? "none" : templateList.Direction == ListReadingDirection.RTL ? "rtl" : "ltr";
+                    isDirty = true;
+                }
+                else if (existingList.Direction == "rtl" && templateList.Direction != ListReadingDirection.RTL)
+                {
+                    existingList.Direction = templateList.Direction == ListReadingDirection.None ? "none" : templateList.Direction == ListReadingDirection.RTL ? "rtl" : "ltr";
+                    isDirty = true;
+                }
+                else if (existingList.Direction == "ltr" && templateList.Direction != ListReadingDirection.LTR)
+                {
+                    existingList.Direction = templateList.Direction == ListReadingDirection.None ? "none" : templateList.Direction == ListReadingDirection.RTL ? "rtl" : "ltr";
+                    isDirty = true;
+                }
+                if (templateList.ImageUrl != null && existingList.ImageUrl != parser.ParseString(templateList.ImageUrl))
+                {
+                    existingList.ImageUrl = parser.ParseString(templateList.ImageUrl);
+                    isDirty = true;
+                }
+                if (existingList.IsApplicationList != templateList.IsApplicationList)
+                {
+                    existingList.IsApplicationList = templateList.IsApplicationList;
+                    isDirty = true;
+                }
+#if !ONPREMISES
+                if (existingList.ReadSecurity != (templateList.ReadSecurity == 0 ? 1 : templateList.ReadSecurity))
+                {
+                    existingList.ReadSecurity = (templateList.ReadSecurity == 0 ? 1 : templateList.ReadSecurity);
+                    isDirty = true;
+                }
+#endif
+                if (templateList.ValidationFormula != null && existingList.ValidationFormula != parser.ParseString(templateList.ValidationFormula))
+                {
+                    existingList.ValidationFormula = parser.ParseString(templateList.ValidationFormula);
+                    isDirty = true;
+                }
+                if (templateList.ValidationMessage != null && existingList.ValidationMessage != parser.ParseString(templateList.ValidationMessage))
+                {
+                    existingList.ValidationMessage = parser.ParseString(templateList.ValidationMessage);
+                    isDirty = true;
+                }
+
+                if (existingList.IrmExpire != templateList.IrmExpire)
+                {
+                    existingList.IrmExpire = templateList.IrmExpire;
+                    isDirty = true;
+                }
+                if (existingList.IrmReject != templateList.IrmReject)
+                {
+                    existingList.IrmReject = templateList.IrmReject;
+                    isDirty = true;
+                }
+
+                if (existingList.BaseTemplate != (int)ListTemplateType.PictureLibrary && templateList.IRMSettings != null)
+                {
+                    if (existingList.IrmEnabled != templateList.IRMSettings.Enabled)
+                    {
+                        existingList.IrmEnabled = templateList.IRMSettings.Enabled;
+                        isDirty = true;
+                    }
+
+                    existingList.EnsureProperties(l => l.InformationRightsManagementSettings);
+
+                    if (existingList.InformationRightsManagementSettings.AllowPrint != templateList.IRMSettings.AllowPrint)
+                    {
+                        existingList.InformationRightsManagementSettings.AllowPrint = templateList.IRMSettings.AllowPrint;
+                        isDirty = true;
+                    }
+                    if (existingList.InformationRightsManagementSettings.AllowScript != templateList.IRMSettings.AllowScript)
+                    {
+                        existingList.InformationRightsManagementSettings.AllowScript = templateList.IRMSettings.AllowScript;
+                        isDirty = true;
+                    }
+                    if (existingList.InformationRightsManagementSettings.AllowWriteCopy != templateList.IRMSettings.AllowWriteCopy)
+                    {
+                        existingList.InformationRightsManagementSettings.AllowWriteCopy = templateList.IRMSettings.AllowWriteCopy;
+                        isDirty = true;
+                    }
+                    if (existingList.InformationRightsManagementSettings.DisableDocumentBrowserView != templateList.IRMSettings.DisableDocumentBrowserView)
+                    {
+                        existingList.InformationRightsManagementSettings.DisableDocumentBrowserView = templateList.IRMSettings.DisableDocumentBrowserView;
+                        isDirty = true;
+                    }
+                    if (existingList.InformationRightsManagementSettings.DocumentAccessExpireDays != templateList.IRMSettings.DocumentAccessExpireDays)
+                    {
+                        existingList.InformationRightsManagementSettings.DocumentAccessExpireDays = templateList.IRMSettings.DocumentAccessExpireDays;
+                        isDirty = true;
+                    }
+                    if (existingList.InformationRightsManagementSettings.DocumentLibraryProtectionExpireDate != DateTime.Now.AddDays(templateList.IRMSettings.DocumentLibraryProtectionExpiresInDays))
+                    {
+                        existingList.InformationRightsManagementSettings.DocumentLibraryProtectionExpireDate = DateTime.Now.AddDays(templateList.IRMSettings.DocumentLibraryProtectionExpiresInDays);
+                        isDirty = true;
+                    }
+                    if (existingList.InformationRightsManagementSettings.EnableDocumentAccessExpire != templateList.IRMSettings.EnableDocumentAccessExpire)
+                    {
+                        existingList.InformationRightsManagementSettings.EnableDocumentAccessExpire = templateList.IRMSettings.EnableDocumentAccessExpire;
+                        isDirty = true;
+                    }
+                    if (existingList.InformationRightsManagementSettings.EnableDocumentBrowserPublishingView != templateList.IRMSettings.EnableDocumentBrowserPublishingView)
+                    {
+                        existingList.InformationRightsManagementSettings.EnableDocumentBrowserPublishingView = templateList.IRMSettings.EnableDocumentBrowserPublishingView;
+                        isDirty = true;
+                    }
+                    if (existingList.InformationRightsManagementSettings.EnableGroupProtection != templateList.IRMSettings.EnableGroupProtection)
+                    {
+                        existingList.InformationRightsManagementSettings.EnableGroupProtection = templateList.IRMSettings.EnableGroupProtection;
+                        isDirty = true;
+                    }
+                    if(existingList.InformationRightsManagementSettings.EnableLicenseCacheExpire != templateList.IRMSettings.EnableLicenseCacheExpire)
+                    {
+                        existingList.InformationRightsManagementSettings.EnableLicenseCacheExpire = templateList.IRMSettings.EnableLicenseCacheExpire;
+                        isDirty = true;
+                    }
+                    if(existingList.InformationRightsManagementSettings.GroupName != parser.ParseString(templateList.IRMSettings.GroupName))
+                    {
+                        existingList.InformationRightsManagementSettings.GroupName = parser.ParseString(templateList.IRMSettings.GroupName);
+                        isDirty = true;
+                    }
+                    if(existingList.InformationRightsManagementSettings.LicenseCacheExpireDays != templateList.IRMSettings.LicenseCacheExpireDays)
+                    {
+                        existingList.InformationRightsManagementSettings.LicenseCacheExpireDays = templateList.IRMSettings.LicenseCacheExpireDays;
+                        isDirty = true;
+                    }
+                    if(existingList.InformationRightsManagementSettings.PolicyDescription != parser.ParseString(templateList.IRMSettings.PolicyDescription))
+                    {
+                        existingList.InformationRightsManagementSettings.PolicyDescription = parser.ParseString(templateList.IRMSettings.PolicyDescription);
+                        isDirty = true;
+                    }
+                    if(existingList.InformationRightsManagementSettings.PolicyTitle != parser.ParseString(templateList.IRMSettings.PolicyTitle))
+                    {
+                        existingList.InformationRightsManagementSettings.PolicyTitle = parser.ParseString(templateList.IRMSettings.PolicyTitle);
+                        isDirty = true;
+                    }
+                }
                 if (existingList.BaseTemplate != (int)ListTemplateType.Survey &&
                     templateList.ContentTypesEnabled != existingList.ContentTypesEnabled)
                 {
                     existingList.ContentTypesEnabled = templateList.ContentTypesEnabled;
                     isDirty = true;
                 }
+#if !ONPREMISES
+                if (existingList.ListExperienceOptions != (Microsoft.SharePoint.Client.ListExperience)Enum.Parse(typeof(Microsoft.SharePoint.Client.ListExperience), templateList.ListExperience.ToString()))
+                {
+                    existingList.ListExperienceOptions = (Microsoft.SharePoint.Client.ListExperience)Enum.Parse(typeof(Microsoft.SharePoint.Client.ListExperience), templateList.ListExperience.ToString());
+                    isDirty = true;
+                }
+#endif
                 if (existingList.BaseTemplate != (int)ListTemplateType.Survey &&
                     existingList.BaseTemplate != (int)ListTemplateType.DocumentLibrary &&
                     existingList.BaseTemplate != (int)ListTemplateType.PictureLibrary &&
@@ -1314,6 +1521,69 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
             {
                 createdList.DocumentTemplateUrl = parser.ParseString(list.DocumentTemplate);
             }
+            if (!string.IsNullOrEmpty(parser.ParseString(list.DefaultDisplayFormUrl)))
+            {
+                createdList.DefaultDisplayFormUrl = parser.ParseString(list.DefaultDisplayFormUrl);
+            }
+            if (!string.IsNullOrEmpty(parser.ParseString(list.DefaultEditFormUrl)))
+            {
+                createdList.DefaultEditFormUrl = parser.ParseString(list.DefaultEditFormUrl);
+            }
+            if (!string.IsNullOrEmpty(parser.ParseString(list.DefaultNewFormUrl)))
+            {
+                createdList.DefaultNewFormUrl = parser.ParseString(list.DefaultNewFormUrl);
+            }
+            createdList.Direction = list.Direction.ToString().ToLower();
+            if (!string.IsNullOrEmpty(parser.ParseString(list.ImageUrl)))
+            {
+                createdList.ImageUrl = parser.ParseString(list.ImageUrl);
+            }
+            createdList.IrmExpire = list.IrmExpire;
+            createdList.IrmReject = list.IrmReject;
+            createdList.IsApplicationList = list.IsApplicationList;
+#if !ONPREMISES
+            if (list.ReadSecurity != default(int))
+            {
+                createdList.ReadSecurity = list.ReadSecurity;
+            }
+#endif
+            if (!string.IsNullOrEmpty(parser.ParseString(list.ValidationFormula)))
+            {
+                createdList.ValidationFormula = parser.ParseString(list.ValidationFormula);
+            }
+            if (!string.IsNullOrEmpty(parser.ParseString(list.ValidationMessage)))
+            {
+                createdList.ValidationMessage = parser.ParseString(list.ValidationMessage);
+            }
+            if (createdList.BaseTemplate != (int)ListTemplateType.PictureLibrary && list.IRMSettings != null)
+            {
+                createdList.IrmEnabled = list.IRMSettings.Enabled;
+                createdList.InformationRightsManagementSettings.AllowPrint = list.IRMSettings.AllowPrint;
+                createdList.InformationRightsManagementSettings.AllowScript = list.IRMSettings.AllowScript;
+                createdList.InformationRightsManagementSettings.AllowWriteCopy = list.IRMSettings.AllowWriteCopy;
+                createdList.InformationRightsManagementSettings.DisableDocumentBrowserView = list.IRMSettings.DisableDocumentBrowserView;
+                createdList.InformationRightsManagementSettings.DocumentAccessExpireDays = list.IRMSettings.DocumentAccessExpireDays;
+                createdList.InformationRightsManagementSettings.DocumentLibraryProtectionExpireDate = DateTime.Now.AddDays(list.IRMSettings.DocumentLibraryProtectionExpiresInDays);
+                createdList.InformationRightsManagementSettings.EnableDocumentAccessExpire = list.IRMSettings.EnableDocumentAccessExpire;
+                createdList.InformationRightsManagementSettings.EnableDocumentBrowserPublishingView = list.IRMSettings.EnableDocumentBrowserPublishingView;
+                createdList.InformationRightsManagementSettings.EnableGroupProtection = list.IRMSettings.EnableGroupProtection;
+                createdList.InformationRightsManagementSettings.EnableLicenseCacheExpire = list.IRMSettings.EnableLicenseCacheExpire;
+                if (!string.IsNullOrEmpty(parser.ParseString(list.IRMSettings.GroupName)))
+                {
+                    createdList.InformationRightsManagementSettings.GroupName = parser.ParseString(list.IRMSettings.GroupName);
+                }
+                if (!string.IsNullOrEmpty(parser.ParseString(list.IRMSettings.PolicyDescription)))
+                {
+                    createdList.InformationRightsManagementSettings.PolicyDescription = parser.ParseString(list.IRMSettings.PolicyDescription);
+                }
+                if (!string.IsNullOrEmpty(parser.ParseString(list.IRMSettings.PolicyTitle)))
+                {
+                    createdList.InformationRightsManagementSettings.PolicyTitle = parser.ParseString(list.IRMSettings.PolicyTitle);
+                }
+            }
+#if !ONPREMISES
+            createdList.ListExperienceOptions = (Microsoft.SharePoint.Client.ListExperience)Enum.Parse(typeof(Microsoft.SharePoint.Client.ListExperience), list.ListExperience.ToString());
+#endif
 
             // EnableAttachments are not supported for DocumentLibraries, Survey and PictureLibraries
             // TODO: the user should be warned
@@ -1516,6 +1786,16 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                     parentFolder.Context.ExecuteQueryRetry();
                     currentFolderItem.SetSecurity(parser, folder.Security);
                 }
+
+                // Handle current folder property bags
+                if (folder.PropertyBagEntries != null && folder.PropertyBagEntries.Count > 0)
+                {
+                    foreach (var p in folder.PropertyBagEntries)
+                    {
+                        currentFolder.Properties[p.Key] = parser.ParseString(p.Value);
+                    }
+                    currentFolder.Update();
+                }
             }
         }
 
@@ -1550,7 +1830,22 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                         l => l.MajorVersionLimit,
                         l => l.MajorWithMinorVersionsLimit,
                         l => l.DraftVersionVisibility,
+                        l => l.DefaultDisplayFormUrl,
+                        l => l.DefaultEditFormUrl,
+                        l => l.ImageUrl,
+                        l => l.DefaultNewFormUrl,
+                        l => l.Direction,
+                        l => l.IrmExpire,
+                        l => l.IrmReject,
+                        l => l.IrmEnabled,
+                        l => l.IsApplicationList,
+                        l => l.ValidationFormula,
+                        l => l.ValidationMessage,
                         l => l.DocumentTemplateUrl,
+#if !ONPREMISES
+                        l => l.ListExperienceOptions,
+                        l => l.ReadSecurity,
+#endif
                         l => l.Fields.IncludeWithDefaultProperties(
                             f => f.Id,
                             f => f.Title,
@@ -1625,7 +1920,21 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                         TemplateFeatureID = siteList.TemplateFeatureId,
                         EnableAttachments = siteList.EnableAttachments,
                         OnQuickLaunch = siteList.OnQuickLaunch,
+                        DefaultDisplayFormUrl = Tokenize(siteList.DefaultDisplayFormUrl, web.Url),
+                        DefaultEditFormUrl = Tokenize(siteList.DefaultEditFormUrl, web.Url),
+                        DefaultNewFormUrl = Tokenize(siteList.DefaultNewFormUrl, web.Url),
+                        Direction = siteList.Direction.ToLower() == "none" ? ListReadingDirection.None : siteList.Direction.ToLower() == "rtl" ? ListReadingDirection.RTL : ListReadingDirection.LTR,
+                        ImageUrl = Tokenize(siteList.ImageUrl, web.Url),
+                        IrmExpire = siteList.IrmExpire,
+                        IrmReject = siteList.IrmReject,
+                        IsApplicationList = siteList.IsApplicationList,
+                        ValidationFormula = siteList.ValidationFormula,
+                        ValidationMessage = siteList.ValidationMessage,
                         EnableModeration = siteList.EnableModeration,
+#if !ONPREMISES
+                        ListExperience = (Model.ListExperience)Enum.Parse(typeof(Model.ListExperience), siteList.ListExperienceOptions.ToString()),
+                        ReadSecurity = siteList.ReadSecurity,
+#endif
                         MaxVersionLimit =
                             siteList.IsPropertyAvailable("MajorVersionLimit") ? siteList.MajorVersionLimit : 0,
                         EnableMinorVersions = siteList.EnableMinorVersions,
@@ -1637,6 +1946,11 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                             siteList.ForceCheckout : false,
                         DraftVersionVisibility = siteList.IsPropertyAvailable("DraftVersionVisibility") ? (int)siteList.DraftVersionVisibility : 0,
                     };
+
+                    if (siteList.BaseTemplate != (int)ListTemplateType.PictureLibrary)
+                    {
+                        siteList.EnsureProperties(l => l.InformationRightsManagementSettings);
+                    }
 
                     if (creationInfo.PersistMultiLanguageResources)
                     {
@@ -1662,6 +1976,8 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                     list = ExtractUserCustomActions(web, siteList, list, creationInfo, template);
 
                     list.Security = siteList.GetSecurity();
+
+                    list = ExtractInformationRightsManagement(web, siteList, list, creationInfo, template);
 
                     if (baseTemplateList != null)
                     {
@@ -1942,6 +2258,33 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
             }
             return list;
         }
+        private static ListInstance ExtractInformationRightsManagement(Web web, List siteList, ListInstance list, ProvisioningTemplateCreationInformation creationInfo, ProvisioningTemplate template)
+        {
+            if (siteList.BaseTemplate != (int)ListTemplateType.PictureLibrary && siteList.IrmEnabled)
+            {
+                list.IRMSettings = new IRMSettings();
+                list.IRMSettings.Enabled = siteList.IrmEnabled;
+                list.IrmExpire = siteList.IrmExpire;
+                list.IrmReject = siteList.IrmReject;
+
+                list.IRMSettings.AllowPrint = siteList.InformationRightsManagementSettings.AllowPrint;
+                list.IRMSettings.AllowScript = siteList.InformationRightsManagementSettings.AllowScript;
+                list.IRMSettings.AllowWriteCopy = siteList.InformationRightsManagementSettings.AllowWriteCopy;
+                list.IRMSettings.DisableDocumentBrowserView = siteList.InformationRightsManagementSettings.DisableDocumentBrowserView;
+                list.IRMSettings.DocumentAccessExpireDays = siteList.InformationRightsManagementSettings.DocumentAccessExpireDays;
+                list.IRMSettings.DocumentLibraryProtectionExpiresInDays = (Int32)siteList.InformationRightsManagementSettings.DocumentLibraryProtectionExpireDate.Subtract(DateTime.Now).TotalDays;
+                list.IRMSettings.EnableDocumentAccessExpire = siteList.InformationRightsManagementSettings.EnableDocumentAccessExpire;
+                list.IRMSettings.EnableDocumentBrowserPublishingView = siteList.InformationRightsManagementSettings.EnableDocumentBrowserPublishingView;
+                list.IRMSettings.EnableGroupProtection = siteList.InformationRightsManagementSettings.EnableGroupProtection;
+                list.IRMSettings.EnableLicenseCacheExpire = siteList.InformationRightsManagementSettings.EnableLicenseCacheExpire;
+                list.IRMSettings.GroupName = siteList.InformationRightsManagementSettings.GroupName;
+                list.IRMSettings.LicenseCacheExpireDays = siteList.InformationRightsManagementSettings.LicenseCacheExpireDays;
+                list.IRMSettings.PolicyDescription = siteList.InformationRightsManagementSettings.PolicyDescription;
+                list.IRMSettings.PolicyTitle = siteList.InformationRightsManagementSettings.PolicyTitle;
+            }
+
+            return (list);
+        }
 
         private static ListInstance ExtractUserCustomActions(Web web, List siteList, ListInstance list, ProvisioningTemplateCreationInformation creationInfo, ProvisioningTemplate template)
         {
@@ -2001,7 +2344,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
         {
             foreach (var list in lists)
             {
-                schemaXml = Regex.Replace(schemaXml, list.Id.ToString(), $"{{listid:{list.Title}}}", RegexOptions.IgnoreCase);
+                schemaXml = Regex.Replace(schemaXml, list.Id.ToString(), $"{{listid:{System.Security.SecurityElement.Escape(list.Title)}}}", RegexOptions.IgnoreCase);
             }
             schemaXml = Regex.Replace(schemaXml, web.Id.ToString("B"), "{{siteid}}", RegexOptions.IgnoreCase);
             schemaXml = Regex.Replace(schemaXml, web.Id.ToString("D"), "{siteid}", RegexOptions.IgnoreCase);
