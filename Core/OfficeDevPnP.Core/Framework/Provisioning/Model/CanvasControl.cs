@@ -17,7 +17,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
         /// <summary>
         /// Defines the custom properties for the client-side web part control.
         /// </summary>
-        public Dictionary<String, String> ControlProperties { get; set; }
+        public Dictionary<String, String> ControlProperties { get; set; } = new Dictionary<string, string>();
 
         /// <summary>
         /// Defines the Type of Client-side Web Part.
@@ -45,9 +45,9 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
         public Int32 Order { get; set; }
 
         /// <summary>
-        /// Defines the Section of the Zone in which the Canvas Control will be inserted. Optional, default 0.
+        /// Defines the column of the section in which the Canvas Control will be inserted. Optional, default 0.
         /// </summary>
-        public Int32 Section { get; set; }
+        public Int32 Column { get; set; }
 
         #endregion
 
@@ -66,7 +66,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
                 JsonControlData?.GetHashCode() ?? 0,
                 ControlId.GetHashCode(),
                 Order.GetHashCode(),
-                Section.GetHashCode()
+                Column.GetHashCode()
             ).GetHashCode());
         }
 
@@ -102,7 +102,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
                 this.JsonControlData == other.JsonControlData &&
                 this.ControlId == other.ControlId &&
                 this.Order == other.Order &&
-                this.Section == other.Section
+                this.Column == other.Column
                 );
         }
 
@@ -112,6 +112,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
     public enum WebPartType
     {
         Custom,
+        Text,
         ContentRollup,
         BingMap,
         ContentEmbed,
@@ -133,5 +134,10 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
         PageTitle,
         People,
         QuickLinks,
+        CustomMessageRegion,
+        Divider,
+        MicrosoftForms,
+        Spacer,
+        ClientWebPart
     }
 }

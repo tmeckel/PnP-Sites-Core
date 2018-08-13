@@ -14,31 +14,80 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
     {
         #region Private Members
 
-        private CanvasZoneCollection _zones;
+        private CanvasSectionCollection _sections;
+
+        private ClientSidePageHeader _header;
 
         #endregion
 
         #region Public Members
 
         /// <summary>
-        /// Gets or sets the zones
+        /// Gets or sets the sections
         /// </summary>
-        public CanvasZoneCollection Zones
+        public CanvasSectionCollection Sections
         {
-            get { return _zones; }
-            private set { _zones = value; }
+            get { return _sections; }
+            private set { _sections = value; }
         }
 
         /// <summary>
-        /// Defines the Pages Library of the Client Side Page, required attribute.
+        /// Defines the Page Name of the Client Side Page, required attribute.
         /// </summary>
-        public String PagesLibrary { get; set; }
+        public String PageName { get; set; }
 
         /// <summary>
         /// Defines whether to promote the page as a news article, optional attribute
         /// </summary>
         public Boolean PromoteAsNewsArticle { get; set; }
 
+        /// <summary>
+        /// Defines whether the page can be overwritten if it exists
+        /// </summary>
+        public Boolean Overwrite { get; set; }
+
+        /// <summary>
+        /// Defines the Layout for the client-side page
+        /// </summary>
+        public String Layout { get; set; }
+
+        /// <summary>
+        /// Defines whether to publish the client-side page or not
+        /// </summary>
+        public Boolean Publish { get; set; }
+
+        /// <summary>
+        /// Defines whether the page will have comments enabled or not
+        /// </summary>
+        public Boolean EnableComments { get; set; }
+
+        /// <summary>
+        /// Defines the Title for the client-side page
+        /// </summary>
+        public String Title { get; set; }
+
+        /// <summary>
+        /// Defines the Header for the client-side page
+        /// </summary>
+        public ClientSidePageHeader Header
+        {
+            get
+            {
+                return (this._header);
+            }
+            set
+            {
+                if (this._header != null)
+                {
+                    this._header.ParentTemplate = null;
+                }
+                this._header = value;
+                if (this._header != null)
+                {
+                    this._header.ParentTemplate = this.ParentTemplate;
+                }
+            }
+        }
         #endregion
 
         #region Constructors
@@ -48,7 +97,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
         /// </summary>
         public ClientSidePage()
         {
-            this._zones = new CanvasZoneCollection(this.ParentTemplate);
+            this._sections = new CanvasSectionCollection(this.ParentTemplate);
         }
 
         #endregion
@@ -61,10 +110,15 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
         /// <returns>Returns HashCode</returns>
         public override int GetHashCode()
         {
-            return (String.Format("{0}|{1}|{2}|",
-                this.Zones.Aggregate(0, (acc, next) => acc += (next != null ? next.GetHashCode() : 0)),
-                PagesLibrary?.GetHashCode() ?? 0,
-                PromoteAsNewsArticle.GetHashCode()
+            return (String.Format("{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}|",
+                this.Sections.Aggregate(0, (acc, next) => acc += (next != null ? next.GetHashCode() : 0)),
+                this.PageName?.GetHashCode() ?? 0,
+                this.PromoteAsNewsArticle.GetHashCode(),
+                this.Overwrite.GetHashCode(),
+                this.Layout?.GetHashCode() ?? 0,
+                this.Publish.GetHashCode(),
+                this.EnableComments.GetHashCode(),
+                this.Title?.GetHashCode() ?? 0
             ).GetHashCode());
         }
 
@@ -83,7 +137,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
         }
 
         /// <summary>
-        /// Compares ClientSidePage object based on Zones, PagesLibrary, and PromoteAsNewsArticle
+        /// Compares ClientSidePage object based on Sections, PageName, PromoteAsNewsArticle, Overwrite, Layout, Publish, EnableComments, and Title
         /// </summary>
         /// <param name="other">ClientSidePage Class object</param>
         /// <returns>true if the ClientSidePage object is equal to the current object; otherwise, false.</returns>
@@ -94,9 +148,14 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.Model
                 return (false);
             }
 
-            return (this.Zones.DeepEquals(other.Zones)  &&
-                this.PagesLibrary == other.PagesLibrary &&
-                this.PromoteAsNewsArticle == other.PromoteAsNewsArticle
+            return (this.Sections.DeepEquals(other.Sections) &&
+                this.PageName == other.PageName &&
+                this.PromoteAsNewsArticle == other.PromoteAsNewsArticle &&
+                this.Overwrite == other.Overwrite &&
+                this.Layout == other.Layout &&
+                this.Publish == other.Publish &&
+                this.EnableComments == other.EnableComments &&
+                this.Title == other.Title
                 );
         }
 
