@@ -10,6 +10,7 @@ using Microsoft.SharePoint.Client.Taxonomy;
 using OfficeDevPnP.Core;
 using OfficeDevPnP.Core.Entities;
 using OfficeDevPnP.Core.Diagnostics;
+using System.Diagnostics;
 
 namespace Microsoft.SharePoint.Client
 {
@@ -1314,11 +1315,11 @@ namespace Microsoft.SharePoint.Client
                 var termSet = termStore.GetTermSet(termSetId);
                 terms = termSet.Terms;
                 clientContext.Load(terms, t => t.IncludeWithDefaultProperties(s => s.TermSet), t => t.IncludeWithDefaultProperties(s => s.TermSet.Group));
+                clientContext.ExecuteQueryRetry();
             }
 
-            clientContext.ExecuteQueryRetry();
-
-            return terms.SelectMany(_t => ExportTerm(_t, includeId, delimiter, clientContext))
+            return terms.ToList()
+                .SelectMany(_t => ExportTerm(_t, null, includeId, delimiter, clientContext))
                 .Distinct()
                 .ToList();
         }
@@ -1341,8 +1342,9 @@ namespace Microsoft.SharePoint.Client
             var termStores = taxonomySession.TermStores;
             clientContext.Load(termStores, t => t.IncludeWithDefaultProperties(s => s.Groups));
             clientContext.ExecuteQueryRetry();
-            return termStores
-                .SelectMany(_ts => _ts.Groups)
+
+            return termStores.ToList()
+                .SelectMany(_ts => _ts.Groups.ToList())
                 .SelectMany(_grp => ExportTermGroup(site, _grp, includeId, delimiter))
                 .Distinct()
                 .ToList();
@@ -1354,16 +1356,30 @@ namespace Microsoft.SharePoint.Client
             var clientContext = site.Context;
             var termSets = termGroup.TermSets;
 
-            clientContext.Load(termSets);
+            clientContext.Load(termSets, ts => ts.IncludeWithDefaultProperties(t => t.Terms));
             clientContext.ExecuteQueryRetry();
 
-            return termSets.SelectMany(_ts => ExportTermSet(site, _ts.Id, includeId, termGroup.TermStore, delimiter))
+            return termSets.ToList()
+                .SelectMany(_ts => ExportTermSet(site, _ts.Id, includeId, termGroup.TermStore, delimiter))
                 .Distinct()
                 .ToList();
         }
 
-        private static List<string> ExportTerm(Term term, bool includeId, string delimiter, ClientRuntimeContext clientContext)
+        private static List<string> ExportTerm(Term term, string parentPath, bool includeId, string delimiter, ClientRuntimeContext clientContext)
         {
+#if DEBUG
+            Debug.Assert(!string.IsNullOrWhiteSpace(delimiter));
+            Debug.Assert(null != term);
+            Debug.Assert(null != clientContext);
+#endif
+            if (!term.IsObjectPropertyInstantiated("TermSet"))
+            {
+                clientContext.Load(term.TermSet, ts => ts.Id, ts => ts.Name);
+            }
+            if (!term.TermSet.IsObjectPropertyInstantiated("Group"))
+            {
+                clientContext.Load(term.TermSet.Group, g => g.Id, g => g.Name, g => g.Id);
+            }
             var termsString = new List<string>();
             var groupName = DenormalizeName(term.TermSet.Group.Name);
             var termsetName = DenormalizeName(term.TermSet.Name);
@@ -1371,13 +1387,24 @@ namespace Microsoft.SharePoint.Client
             //clientContext.ExecuteQueryRetry();
             var groupPath = string.Format("{0}{1}", groupName, (includeId) ? string.Format(";#{0}", term.TermSet.Group.Id.ToString()) : "");
             var termsetPath = string.Format("{0}{1}", termsetName, (includeId) ? string.Format(";#{0}", term.TermSet.Id.ToString()) : "");
-            var termPath = string.Format("{0}{1}", termName, (includeId) ? string.Format(";#{0}", term.Id.ToString()) : "");
+            var termPath = string.Format("{0}{1}", term.Name, (includeId) ? string.Format(";#{0}", term.Id.ToString()) : "");
+            if (!string.IsNullOrWhiteSpace(parentPath))
+            {
+                termPath = parentPath + delimiter + termPath;
+            }
             termsString.Add(string.Format("{0}{3}{1}{3}{2}{3}{4}", groupPath, termsetPath, termPath, delimiter, term.IsReused));
 
             if (term.TermsCount > 0)
             {
-                termsString.AddRange(term.Terms
-                        .SelectMany(_t => ExportTerm(_t, includeId, delimiter, clientContext)
+                if (!term.IsObjectPropertyInstantiated("Terms"))
+                {
+                    clientContext.Load(term.Terms, 
+                        t => t.IncludeWithDefaultProperties(s => s.TermSet), 
+                        t => t.IncludeWithDefaultProperties(s => s.TermSet.Group));
+                    clientContext.ExecuteQueryRetry();
+                }
+                termsString.AddRange(term.Terms.ToList()
+                        .SelectMany(_t => ExportTerm(_t, termPath, includeId, delimiter, clientContext)
                         .Distinct()));
             }
             return termsString.Distinct().ToList();
