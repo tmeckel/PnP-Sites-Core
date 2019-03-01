@@ -1,5 +1,4 @@
-﻿#if !ONPREMISES
-using Microsoft.SharePoint.Client;
+﻿using Microsoft.SharePoint.Client;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OfficeDevPnP.Core.Utilities;
@@ -371,7 +370,7 @@ namespace OfficeDevPnP.Core.Sites
                         if (Convert.ToInt32(responseJson["SiteStatus"]) == 2 || Convert.ToInt32(responseJson["SiteStatus"]) == 1)
 #else
                         if (responseJson["SiteStatus"].Value<int>() == 2 || responseJson["SiteStatus"].Value<int>() == 1)
-#endif                  
+#endif
                         {
                             responseContext = clientContext;
                         }
@@ -623,4 +622,3 @@ namespace OfficeDevPnP.Core.Sites
         }
     }
 }
-#endif

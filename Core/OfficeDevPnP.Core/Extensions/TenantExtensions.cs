@@ -16,6 +16,7 @@ using OfficeDevPnP.Core.UPAWebService;
 using OfficeDevPnP.Core.Diagnostics;
 using OfficeDevPnP.Core.Framework.Graph;
 using OfficeDevPnP.Core.Framework.Graph.Model;
+using System.Diagnostics;
 #if !ONPREMISES
 using OfficeDevPnP.Core.Sites;
 using OfficeDevPnP.Core.Framework.Provisioning.Model;
@@ -31,15 +32,52 @@ namespace Microsoft.SharePoint.Client
     {
         const string SITE_STATUS_RECYCLED = "Recycled";
 
-#if !ONPREMISES
+        private static bool WaitForIsComplete(Tenant tenant, SpoOperation op, Func<TenantOperationMessage, bool> timeoutFunction = null, TenantOperationMessage operationMessage = TenantOperationMessage.None)
+        {
+            Debug.Assert(null != tenant);
+            Debug.Assert(null != op);
+
+            bool succeeded = true;
+            op.EnsureProperties(i => i.IsComplete, i => i.PollingInterval);
+            while (!op.IsComplete)
+            {
+                if (timeoutFunction != null && timeoutFunction(operationMessage))
+                {
+                    succeeded = false;
+                    break;
+                }
+                Thread.Sleep(op.PollingInterval);
+
+                op.RefreshLoad();
+                if (!op.IsComplete)
+                {
+                    try
+                    {
+                        tenant.Context.ExecuteQueryRetry();
+                    }
+                    catch (WebException webEx)
+                    {
+                        // Context connection gets closed after action completed.
+                        // Calling ExecuteQuery again returns an error which can be ignored
+                        Log.Warning(CoreResources.TenantExtensions_ClosedContextWarning, webEx.Message);
+                    }
+                }
+            }
+            return succeeded;
+        }
+
         #region Provisioning
 
+#if !ONPREMISES
         public static void ApplyProvisionHierarchy(this Tenant tenant, ProvisioningHierarchy hierarchy, string sequenceId, ProvisioningTemplateApplyingInformation applyingInformation = null)
         {
             SiteToTemplateConversion engine = new SiteToTemplateConversion();
             engine.ApplyProvisioningHierarchy(tenant, hierarchy, sequenceId, applyingInformation);
         }
+#endif
+
         #endregion
+
         #region Site collection creation
         /// <summary>
         /// Adds a SiteEntity by launching site collection creation and waits for the creation to finish
@@ -113,7 +151,7 @@ namespace Microsoft.SharePoint.Client
         }
 
         /// <summary>
-        /// Launches a site collection creation and waits for the creation to finish 
+        /// Launches a site collection creation and waits for the creation to finish
         /// </summary>
         /// <param name="tenant">A tenant object pointing to the context of a Tenant Administration site</param>
         /// <param name="siteFullUrl">The SPO URL</param>
@@ -154,7 +192,7 @@ namespace Microsoft.SharePoint.Client
 
         #region Site status checks
         /// <summary>
-        /// Returns if a site collection is in a particular status. If the URL contains a sub site then returns true is the sub site exists, false if not. 
+        /// Returns if a site collection is in a particular status. If the URL contains a sub site then returns true is the sub site exists, false if not.
         /// Status is irrelevant for sub sites
         /// </summary>
         /// <param name="tenant">A tenant object pointing to the context of a Tenant Administration site</param>
@@ -343,7 +381,7 @@ namespace Microsoft.SharePoint.Client
             {
                 if (!useRecycleBin && IsCannotRemoveSiteException(ex))
                 {
-                    //eat exception as the site might be in the recycle bin and we allowed deletion from recycle bin 
+                    //eat exception as the site might be in the recycle bin and we allowed deletion from recycle bin
                 }
                 else
                 {
@@ -476,10 +514,12 @@ namespace Microsoft.SharePoint.Client
             double? userCodeMaximumLevel = null,
             double? userCodeWarningLevel = null,
             bool? noScriptSite = null,
+#if !ONPREMISES
             bool? commentsOnSitePagesDisabled = null,
             bool? socialBarOnSitePagesDisabled = null,
             SharingPermissionType? defaultLinkPermission = null,
             SharingLinkType? defaultSharingLinkType = null,
+#endif
             bool wait = true, Func<TenantOperationMessage, bool> timeoutFunction = null
             )
         {
@@ -500,19 +540,22 @@ namespace Microsoft.SharePoint.Client
                     siteProps.UserCodeMaximumLevel = userCodeMaximumLevel.Value;
                 if (userCodeWarningLevel != null)
                     siteProps.UserCodeWarningLevel = userCodeWarningLevel.Value;
+#if !ONPREMISES
                 if (defaultLinkPermission != null)
                     siteProps.DefaultLinkPermission = defaultLinkPermission.Value;
                 if (defaultSharingLinkType != null)
                     siteProps.DefaultSharingLinkType = defaultSharingLinkType.Value;
+#endif
                 if (title != null)
                     siteProps.Title = title;
                 if (noScriptSite != null)
                     siteProps.DenyAddAndCustomizePages = (noScriptSite == true ? DenyAddAndCustomizePagesStatus.Enabled : DenyAddAndCustomizePagesStatus.Disabled);
+#if !ONPREMISES
                 if (commentsOnSitePagesDisabled != null)
                     siteProps.CommentsOnSitePagesDisabled = commentsOnSitePagesDisabled.Value;
                 if (socialBarOnSitePagesDisabled != null)
                     siteProps.SocialBarOnSitePagesDisabled = socialBarOnSitePagesDisabled.Value;
-
+#endif
                 var op = siteProps.Update();
                 tenant.Context.Load(op, i => i.IsComplete, i => i.PollingInterval);
                 tenant.Context.ExecuteQueryRetry();
@@ -533,7 +576,7 @@ namespace Microsoft.SharePoint.Client
         /// <param name="tenant">A tenant object pointing to the context of a Tenant Administration site (i.e. https://[tenant]-admin.sharepoint.com)</param>
         /// <param name="siteFullUrl">The target site to change the lock state.</param>
         /// <param name="lockState">The target state the site should be changed to.</param>
-        /// <param name="wait">If true, processing will halt until the site collection lock state has been implemented</param>      
+        /// <param name="wait">If true, processing will halt until the site collection lock state has been implemented</param>
         /// <param name="timeoutFunction">An optional function that will be called while waiting for the site to be created. If set will override the wait variable. Return true to cancel the wait loop.</param>
         public static void SetSiteLockState(this Tenant tenant, string siteFullUrl, SiteLockState lockState, bool wait = false, Func<TenantOperationMessage, bool> timeoutFunction = null)
         {
@@ -599,8 +642,9 @@ namespace Microsoft.SharePoint.Client
         #endregion
 
         #region Site enumeration
+#if !ONPREMISES
         /// <summary>
-        /// Returns all site collections in the current Tenant based on a startIndex. IncludeDetail adds additional properties to the SPSite object. 
+        /// Returns all site collections in the current Tenant based on a startIndex. IncludeDetail adds additional properties to the SPSite object.
         /// </summary>
         /// <param name="tenant">Tenant object to operate against</param>
         /// <param name="startIndex">Not relevant anymore</param>
@@ -658,6 +702,7 @@ namespace Microsoft.SharePoint.Client
 
             return sites;
         }
+#endif
 
 #if !NETSTANDARD2_0
         /// <summary>
@@ -729,36 +774,6 @@ namespace Microsoft.SharePoint.Client
         #endregion
 
         #region Private helper methods
-        private static bool WaitForIsComplete(Tenant tenant, SpoOperation op, Func<TenantOperationMessage, bool> timeoutFunction = null, TenantOperationMessage operationMessage = TenantOperationMessage.None)
-        {
-            bool succeeded = true;
-            while (!op.IsComplete)
-            {
-                if (timeoutFunction != null && timeoutFunction(operationMessage))
-                {
-                    succeeded = false;
-                    break;
-                }
-                Thread.Sleep(op.PollingInterval);
-
-                op.RefreshLoad();
-                if (!op.IsComplete)
-                {
-                    try
-                    {
-                        tenant.Context.ExecuteQueryRetry();
-                    }
-                    catch (WebException webEx)
-                    {
-                        // Context connection gets closed after action completed.
-                        // Calling ExecuteQuery again returns an error which can be ignored
-                        Log.Warning(CoreResources.TenantExtensions_ClosedContextWarning, webEx.Message);
-                    }
-                }
-            }
-            return succeeded;
-        }
-
         private static bool IsCannotGetSiteException(Exception ex)
         {
             if (ex is ServerException)
@@ -827,7 +842,7 @@ namespace Microsoft.SharePoint.Client
         #region Site Classification configuration
 
         /// <summary>
-        /// Enables Site Classifications for the target tenant 
+        /// Enables Site Classifications for the target tenant
         /// </summary>
         /// <param name="tenant">The target tenant</param>
         /// <param name="accessToken">The OAuth accessToken for Microsoft Graph with Azure AD</param>
@@ -838,7 +853,7 @@ namespace Microsoft.SharePoint.Client
         }
 
         /// <summary>
-        /// Enables Site Classifications for the target tenant 
+        /// Enables Site Classifications for the target tenant
         /// </summary>
         /// <param name="tenant">The target tenant</param>
         /// <param name="accessToken">The OAuth accessToken for Microsoft Graph with Azure AD</param>
@@ -851,7 +866,7 @@ namespace Microsoft.SharePoint.Client
         }
 
         /// <summary>
-        /// Enables Site Classifications for the target tenant 
+        /// Enables Site Classifications for the target tenant
         /// </summary>
         /// <param name="tenant">The target tenant</param>
         /// <param name="accessToken">The OAuth accessToken for Microsoft Graph with Azure AD</param>
@@ -897,6 +912,7 @@ namespace Microsoft.SharePoint.Client
 
         #endregion
 
+#if !ONPREMISES
         #region Site groupify
         /// <summary>
         /// Connect an Office 365 group to an existing SharePoint site collection
@@ -941,56 +957,6 @@ namespace Microsoft.SharePoint.Client
             }
 
             tenant.CreateGroupForSite(siteUrl, siteCollectionGroupifyInformation.DisplayName, siteCollectionGroupifyInformation.Alias, siteCollectionGroupifyInformation.IsPublic, optionalParams);
-            tenant.Context.ExecuteQueryRetry();
-        }
-        #endregion
-
-#else
-        #region Site collection creation
-        /// <summary>
-        /// Adds a SiteEntity by launching site collection creation and waits for the creation to finish
-        /// </summary>
-        /// <param name="tenant">A tenant object pointing to the context of a Tenant Administration site</param>
-        /// <param name="properties">Describes the site collection to be created</param>
-        public static void CreateSiteCollection(this Tenant tenant, SiteEntity properties)
-        {
-            SiteCreationProperties newsite = new SiteCreationProperties();
-            newsite.Url = properties.Url;
-            newsite.Owner = properties.SiteOwnerLogin;
-            newsite.Template = properties.Template;
-            newsite.Title = properties.Title;
-            newsite.StorageMaximumLevel = properties.StorageMaximumLevel;
-            newsite.StorageWarningLevel = properties.StorageWarningLevel;
-            newsite.TimeZoneId = properties.TimeZoneId;
-            newsite.UserCodeMaximumLevel = properties.UserCodeMaximumLevel;
-            newsite.UserCodeWarningLevel = properties.UserCodeWarningLevel;
-            newsite.Lcid = properties.Lcid;
-
-            try
-            {
-                tenant.CreateSite(newsite);
-                tenant.Context.ExecuteQueryRetry();
-            }
-            catch (Exception ex)
-            {
-                // Eat the siteSubscription exception to make the same code work for MT as on-prem April 2014 CU+
-                if (ex.Message.IndexOf("Parameter name: siteSubscription") == -1)
-                {
-                    throw;
-                }
-            }
-        }
-        #endregion
-
-        #region Site collection deletion
-        /// <summary>
-        /// Deletes a site collection
-        /// </summary>
-        /// <param name="tenant">A tenant object pointing to the context of a Tenant Administration site</param>
-        /// <param name="siteFullUrl">Url of the site collection to delete</param>
-        public static void DeleteSiteCollection(this Tenant tenant, string siteFullUrl)
-        {
-            tenant.RemoveSite(siteFullUrl);
             tenant.Context.ExecuteQueryRetry();
         }
         #endregion

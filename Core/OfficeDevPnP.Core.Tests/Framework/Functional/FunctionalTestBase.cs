@@ -21,7 +21,7 @@ namespace OfficeDevPnP.Core.Tests.Framework.Functional
 
         #region Test preparation
         public static void ClassInitBase(TestContext context, bool noScriptSite = false)
-        {            
+        {
             // Drop all previously created site collections to keep the environment clean
             using (var tenantContext = TestCommon.CreateTenantClientContext())
             {
@@ -36,7 +36,7 @@ namespace OfficeDevPnP.Core.Tests.Framework.Functional
                     // Add a default sub site
                     centralSubSiteUrl = CreateTestSubSite(tenant, centralSiteCollectionUrl, centralSubSiteName);
 
-#if !ONPREMISES                    
+#if !ONPREMISES
                     // Apply noscript setting
                     if (noScriptSite)
                     {
@@ -61,7 +61,7 @@ namespace OfficeDevPnP.Core.Tests.Framework.Functional
                     try
                     {
                         Tenant t = new Tenant(tenantContext);
-                        t.DeleteSiteCollection(centralSiteCollectionUrl);
+                        t.DeleteSiteCollection(centralSiteCollectionUrl, false);
                     }
                     catch { }
 
@@ -81,7 +81,6 @@ namespace OfficeDevPnP.Core.Tests.Framework.Functional
 #endregion
 
 #region Helper methods
-#if !ONPREMISES
         internal static string CreateTestSiteCollection(Tenant tenant, string sitecollectionName)
         {
             try
@@ -124,6 +123,7 @@ namespace OfficeDevPnP.Core.Tests.Framework.Functional
 
         private static void CleanupAllTestSiteCollections(ClientContext tenantContext)
         {
+#if !ONPREMISES
             var tenant = new Tenant(tenantContext);
 
             try
@@ -169,7 +169,7 @@ namespace OfficeDevPnP.Core.Tests.Framework.Functional
                 Console.WriteLine(ex.ToDetailedString(tenant.Context));
                 throw;
             }
-
+#endif
         }
 
         internal static string CreateTestSubSite(Tenant tenant, string sitecollectionUrl, string subSiteName)
@@ -208,98 +208,6 @@ namespace OfficeDevPnP.Core.Tests.Framework.Functional
             //subWeb.EnsureProperty(t => t.Url);
             //return subWeb.Url;
         }
-#else
-        private static string CreateTestSiteCollection(Tenant tenant, string sitecollectionName, bool isNoScriptSite = false)
-        {
-            string devSiteUrl = TestCommon.AppSetting("SPODevSiteUrl");
-
-            string siteOwnerLogin = string.Format("{0}\\{1}", TestCommon.AppSetting("OnPremDomain"), TestCommon.AppSetting("OnPremUserName"));
-            if (TestCommon.AppOnlyTesting())
-            {
-                using (var clientContext = TestCommon.CreateClientContext())
-                {
-                    List<UserEntity> admins = clientContext.Web.GetAdministrators();
-                    siteOwnerLogin = admins[0].LoginName.Split(new string[] { "|" }, StringSplitOptions.RemoveEmptyEntries)[1];
-                }
-            }
-
-            string siteToCreateUrl = GetTestSiteCollectionName(devSiteUrl, sitecollectionName);
-            SiteEntity siteToCreate = new SiteEntity()
-            {
-                Url = siteToCreateUrl,
-                Template = "STS#0",
-                Title = "Test",
-                Description = "Test site collection",
-                SiteOwnerLogin = siteOwnerLogin,
-                Lcid = 1033,
-            };
-
-            tenant.CreateSiteCollection(siteToCreate);
-
-            // Create the default groups
-            using (ClientContext cc = new ClientContext(siteToCreateUrl))
-            {
-                var owners = cc.Web.AddGroup("Test Owners", "", true, false);
-                var members = cc.Web.AddGroup("Test Members", "", true, false);
-                var visitors = cc.Web.AddGroup("Test Visitors", "", true, true);
-
-                cc.Web.AssociateDefaultGroups(owners, members, visitors);
-            }
-
-            return siteToCreateUrl;
-        }
-
-        internal static string CreateTestSubSite(Tenant tenant, string sitecollectionUrl, string subSiteName)
-        {
-            using (ClientContext cc = new ClientContext(sitecollectionUrl))
-            {
-                //Create sub site
-                SiteEntity sub = new SiteEntity() { Title = "Sub site for engine testing", Url = subSiteName, Description = "" };
-                var subWeb = cc.Web.CreateWeb(sub);
-                subWeb.EnsureProperty(t => t.Url);
-                return subWeb.Url;
-            }
-        }
-
-        private static void CleanupAllTestSiteCollections(ClientContext tenantContext)
-        {
-            string devSiteUrl = TestCommon.AppSetting("SPODevSiteUrl");
-                       
-            var tenant = new Tenant(tenantContext);
-            try
-            {
-                using (ClientContext cc = tenantContext.Clone(devSiteUrl))
-                {
-                    var sites = cc.Web.SiteSearch();
-
-                    foreach(var site in sites)
-                    {
-                        if (site.Url.ToLower().Contains(sitecollectionNamePrefix.ToLower()))
-                        {
-                            tenant.DeleteSiteCollection(site.Url);
-                        }
-                    }
-                }
-            }
-            catch
-            { }
-        }
-
-        private void CleanupCreatedTestSiteCollections(ClientContext tenantContext)
-        {
-            string devSiteUrl = TestCommon.AppSetting("SPODevSiteUrl");
-            String testSiteCollection = GetTestSiteCollectionName(devSiteUrl, sitecollectionName);
-
-            //Ensure the test site collection was deleted and removed from recyclebin
-            var tenant = new Tenant(tenantContext);
-            try
-            {
-                tenant.DeleteSiteCollection(testSiteCollection);
-            }
-            catch
-            { }
-        }
-#endif
 
         private static string GetTestSiteCollectionName(string devSiteUrl, string siteCollection)
         {

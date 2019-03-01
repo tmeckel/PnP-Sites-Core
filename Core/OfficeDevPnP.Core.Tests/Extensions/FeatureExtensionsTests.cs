@@ -57,7 +57,6 @@ namespace Microsoft.SharePoint.Client.Tests
             }
         }
 
-#if !ONPREMISES
         internal static string CreateTestSiteCollection(Tenant tenant, string sitecollectionName)
         {
             try
@@ -96,6 +95,7 @@ namespace Microsoft.SharePoint.Client.Tests
 
         private static void CleanupAllTestSiteCollections(ClientContext tenantContext)
         {
+#if !ONPREMISES
             var tenant = new Tenant(tenantContext);
 
             try
@@ -141,76 +141,8 @@ namespace Microsoft.SharePoint.Client.Tests
                 Console.WriteLine(ex.ToDetailedString(tenant.Context));
                 throw;
             }
-        }
-
-#else
-        private static string CreateTestSiteCollection(Tenant tenant, string sitecollectionName)
-        {
-            string devSiteUrl = TestCommon.AppSetting("SPODevSiteUrl");
-
-            string siteOwnerLogin = string.Format("{0}\\{1}", TestCommon.AppSetting("OnPremDomain"), TestCommon.AppSetting("OnPremUserName"));
-            if (TestCommon.AppOnlyTesting())
-            {
-                using (var clientContext = TestCommon.CreateClientContext())
-                {
-                    List<UserEntity> admins = clientContext.Web.GetAdministrators();
-                    siteOwnerLogin = admins[0].LoginName.Split(new string[] { "|" }, StringSplitOptions.RemoveEmptyEntries)[1];
-                }
-            }
-
-            string siteToCreateUrl = GetTestSiteCollectionName(devSiteUrl, sitecollectionName);
-            SiteEntity siteToCreate = new SiteEntity()
-            {
-                Url = siteToCreateUrl,
-                Template = "STS#0",
-                Title = "Test",
-                Description = "Test site collection",
-                SiteOwnerLogin = siteOwnerLogin,
-            };
-
-            tenant.CreateSiteCollection(siteToCreate);
-            return siteToCreateUrl;
-        }
-
-        private static void CleanupAllTestSiteCollections(ClientContext tenantContext)
-        {
-            string devSiteUrl = TestCommon.AppSetting("SPODevSiteUrl");
-
-            var tenant = new Tenant(tenantContext);
-            try
-            {
-                using (ClientContext cc = tenantContext.Clone(devSiteUrl))
-                {
-                    var sites = cc.Web.SiteSearch();
-
-                    foreach (var site in sites)
-                    {
-                        if (site.Url.ToLower().Contains(sitecollectionNamePrefix.ToLower()))
-                        {
-                            tenant.DeleteSiteCollection(site.Url);
-                        }
-                    }
-                }
-            }
-            catch
-            { }
-        }
-
-        private void CleanupCreatedTestSiteCollections(ClientContext tenantContext)
-        {
-            string devSiteUrl = TestCommon.AppSetting("SPODevSiteUrl");
-            String testSiteCollection = GetTestSiteCollectionName(devSiteUrl, sitecollectionName);
-
-            //Ensure the test site collection was deleted and removed from recyclebin
-            var tenant = new Tenant(tenantContext);
-            try
-            {
-                tenant.DeleteSiteCollection(testSiteCollection);
-            }
-            catch
-            { }
-        }
 #endif
+        }
 
         private static string GetTestSiteCollectionName(string devSiteUrl, string siteCollection)
         {
@@ -274,7 +206,7 @@ namespace Microsoft.SharePoint.Client.Tests
             Assert.IsTrue(clientContext.Site.IsFeatureActive(sp2007WorkflowSiteFeatureId));
 
             clientContext.Site.DeactivateFeature(sp2007WorkflowSiteFeatureId);
-            
+
             Assert.IsFalse(clientContext.Site.IsFeatureActive(sp2007WorkflowSiteFeatureId));
         }
 
@@ -352,7 +284,7 @@ namespace Microsoft.SharePoint.Client.Tests
         {
             // Setup
             try
-            { 
+            {
                 clientContext.Web.DeactivateFeature(contentOrganizerWebFeatureId);
             }
             catch (Exception ex)

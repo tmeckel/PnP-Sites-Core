@@ -55,7 +55,7 @@ namespace Microsoft.SharePoint.Client
         /// <param name="comment">Message to be recorded with the approval</param>
 #if ONPREMISES
         private static void ApproveFileImplementation(this Web web, string serverRelativeUrl, string comment)
-        { 
+        {
             var file = web.GetFileByServerRelativeUrl(serverRelativeUrl);
 #else
         private static async Task ApproveFileImplementation(this Web web, string serverRelativeUrl, string comment)
@@ -310,7 +310,7 @@ namespace Microsoft.SharePoint.Client
             return documentSetFolder;
         }
         /// <summary>
-        /// Converts a folder with the given name as a child of the List RootFolder. 
+        /// Converts a folder with the given name as a child of the List RootFolder.
         /// </summary>
         /// <param name="list">List in which the folder exists</param>
         /// <param name="folderName">Folder name to convert</param>
@@ -334,7 +334,7 @@ namespace Microsoft.SharePoint.Client
         }
 #if !ONPREMISES
         /// <summary>
-        /// Converts a folder with the given name as a child of the List RootFolder. 
+        /// Converts a folder with the given name as a child of the List RootFolder.
         /// </summary>
         /// <param name="list">List in which the folder exists</param>
         /// <param name="folderName">Folder name to convert</param>
@@ -353,7 +353,7 @@ namespace Microsoft.SharePoint.Client
         }
 #endif
         /// <summary>
-        /// Converts a folder with the given name as a child of the List RootFolder. 
+        /// Converts a folder with the given name as a child of the List RootFolder.
         /// </summary>
         /// <param name="list">List in which the folder exists</param>
         /// <param name="folder">Folder to convert</param>
@@ -373,7 +373,7 @@ namespace Microsoft.SharePoint.Client
         }
 #if !ONPREMISES
         /// <summary>
-        /// Converts a folder with the given name as a child of the List RootFolder. 
+        /// Converts a folder with the given name as a child of the List RootFolder.
         /// </summary>
         /// <param name="list">List in which the folder exists</param>
         /// <param name="folder">Folder to convert</param>
@@ -412,7 +412,7 @@ namespace Microsoft.SharePoint.Client
             if (listItem["ContentTypeId"].ToString() == BuiltInContentTypeId.Folder) return folder;
             listItem["ContentTypeId"] = BuiltInContentTypeId.DocumentSet;
 
-            // Add missing properties            
+            // Add missing properties
             listItem["HTML_x0020_File_x0020_Type"] = "Sharepoint.DocumentSet";
             folder.Properties["docset_LastRefresh"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss");
             folder.Properties["vti_contenttypeorder"] = string.Join(",", list.ContentTypes.ToList().Where(c => c.StringId.StartsWith(BuiltInContentTypeId.Document + "00"))?.Select(c => c.StringId));
@@ -432,7 +432,7 @@ namespace Microsoft.SharePoint.Client
         }
 
         /// <summary>
-        /// Creates a folder with the given name as a child of the Web. 
+        /// Creates a folder with the given name as a child of the Web.
         /// Note it is more common to create folders within an existing Folder, such as the RootFolder of a List.
         /// </summary>
         /// <param name="web">Web to check for the named folder</param>
@@ -460,7 +460,7 @@ namespace Microsoft.SharePoint.Client
         }
 #if !ONPREMISES
         /// <summary>
-        /// Creates a folder with the given name as a child of the Web. 
+        /// Creates a folder with the given name as a child of the Web.
         /// Note it is more common to create folders within an existing Folder, such as the RootFolder of a List.
         /// </summary>
         /// <param name="web">Web to check for the named folder</param>
@@ -963,7 +963,7 @@ namespace Microsoft.SharePoint.Client
         private static async Task<Folder> EnsureFolderPathImplementation(this Web web, string webRelativeUrl, params Expression<Func<Folder, object>>[] expressions)
 #endif
         {
-            
+
             if (webRelativeUrl == null) { throw new ArgumentNullException(nameof(webRelativeUrl)); }
 
             if(webRelativeUrl.EndsWith("."))

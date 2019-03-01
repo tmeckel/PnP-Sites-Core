@@ -53,7 +53,7 @@ namespace OfficeDevPnP.Core.Tests.AppModelExtensions
                 Assert.IsTrue(siteExists, "Site collection creation failed");
 
                 //Delete site collection test
-                tenant.DeleteSiteCollection(siteToCreateUrl);
+                tenant.DeleteSiteCollection(siteToCreateUrl, false);
                 siteExists = tenant.Context.WebExistsFullUrl(siteToCreateUrl);
                 Assert.IsFalse(siteExists, "Site collection deletion failed");
             }
@@ -86,7 +86,7 @@ namespace OfficeDevPnP.Core.Tests.AppModelExtensions
             var tenant = new Tenant(tenantContext);
             try
             {
-                tenant.DeleteSiteCollection(testSiteCollection);
+                tenant.DeleteSiteCollection(testSiteCollection, false);
             }
             catch
             { }
