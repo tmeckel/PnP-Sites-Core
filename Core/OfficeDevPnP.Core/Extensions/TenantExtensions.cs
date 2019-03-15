@@ -38,21 +38,26 @@ namespace Microsoft.SharePoint.Client
             Debug.Assert(null != op);
 
             bool succeeded = true;
-            op.EnsureProperties(i => i.IsComplete, i => i.PollingInterval);
             while (!op.IsComplete)
             {
+                Log.Debug("TenantExtensions", "SpoOperation not complete; Polling Interval {0}", op.PollingInterval);
                 if (timeoutFunction != null && timeoutFunction(operationMessage))
                 {
+                    Log.Debug("TenantExtensions", "Timeout function marked operation as timed out");
                     succeeded = false;
                     break;
                 }
+
+                Log.Debug("TenantExtensions", "Sleeping for defined polling interval");
                 Thread.Sleep(op.PollingInterval);
 
+                Log.Debug("TenantExtensions", "Refreshing SpOperation status");
                 op.RefreshLoad();
                 if (!op.IsComplete)
                 {
                     try
                     {
+                        Log.Debug("TenantExtensions", "SpOperation not completed execute query on Tenant instance");
                         tenant.Context.ExecuteQueryRetry();
                     }
                     catch (WebException webEx)
@@ -63,6 +68,7 @@ namespace Microsoft.SharePoint.Client
                     }
                 }
             }
+            Log.Debug("TenantExtensions", "SpOperation succeeded? = {0}", succeeded);
             return succeeded;
         }
 
@@ -113,8 +119,21 @@ namespace Microsoft.SharePoint.Client
             SpoOperation op = tenant.CreateSite(newsite);
             tenant.Context.Load(tenant);
             tenant.Context.Load(op, i => i.IsComplete, i => i.PollingInterval);
-            tenant.Context.ExecuteQueryRetry();
-
+            try
+            {
+                tenant.Context.ExecuteQueryRetry();
+            }
+            catch (Exception ex)
+            {
+                if (IsTenantSiteSubscriptionNotSet(ex))
+                {
+                    Log.Warning(Constants.LOGGING_SOURCE, "Tenant at [{0}] has no assigned site subscription.", tenant.Context.Url);
+                }
+                else
+                {
+                    throw;
+                }
+            }
             // Get site guid and return. If we create the site asynchronously, return an empty guid as we cannot retrieve the site by URL yet.
             Guid siteGuid = Guid.Empty;
             if (timeoutFunction != null)
@@ -372,7 +391,29 @@ namespace Microsoft.SharePoint.Client
                 SpoOperation op = tenant.RemoveSite(siteFullUrl);
                 tenant.Context.Load(tenant);
                 tenant.Context.Load(op, i => i.IsComplete, i => i.PollingInterval);
-                tenant.Context.ExecuteQueryRetry();
+                try
+                {
+                    tenant.Context.ExecuteQueryRetry();
+                }
+                catch (Exception ex)
+                {
+                    if (IsTenantSiteSubscriptionNotSet(ex))
+                    {
+                        if (useRecycleBin)
+                        {
+                            Log.Warning(Constants.LOGGING_SOURCE, "Tenant at [{0}] has no assigned site subscription.", tenant.Context.Url);
+                        }
+                        else
+                        {
+                            Log.Warning(Constants.LOGGING_SOURCE, "Unable to use RecycleBin because Tenant at [{0}] has no assigned site subscription.", tenant.Context.Url);
+                            useRecycleBin = true;
+                        }
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
 
                 //check if site creation operation is complete
                 succeeded = WaitForIsComplete(tenant, op, timeoutFunction, TenantOperationMessage.DeletingSiteCollection);
@@ -397,13 +438,7 @@ namespace Microsoft.SharePoint.Client
             if (succeeded)
             {
                 // To delete Site collection completely, (may take a longer time)
-                SpoOperation op2 = tenant.RemoveDeletedSite(siteFullUrl);
-                tenant.Context.Load(op2, i => i.IsComplete, i => i.PollingInterval);
-                tenant.Context.ExecuteQueryRetry();
-
-                succeeded = WaitForIsComplete(tenant, op2, timeoutFunction,
-                    TenantOperationMessage.RemovingDeletedSiteCollectionFromRecycleBin);
-                ret = succeeded;
+                ret = DeleteSiteCollectionFromRecycleBin(tenant, siteFullUrl, true, timeoutFunction);
             }
             return ret;
         }
@@ -774,6 +809,26 @@ namespace Microsoft.SharePoint.Client
         #endregion
 
         #region Private helper methods
+        private static bool IsTenantSiteSubscriptionNotSet(Exception ex)
+        {
+            if (ex is ServerException)
+            {
+                if (((ServerException)ex).ServerErrorTypeName.Equals("System.ArgumentNullException", StringComparison.InvariantCultureIgnoreCase)
+                    && (null != ex.Message && ex.Message.IndexOf("Parameter name: siteSubscription") == -1))
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         private static bool IsCannotGetSiteException(Exception ex)
         {
             if (ex is ServerException)
