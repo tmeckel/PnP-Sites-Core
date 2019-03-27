@@ -160,7 +160,8 @@ namespace Microsoft.SharePoint.Client
                         catch (Exception ex)
                         {
                             // Eat all exceptions cause there's currently (December 16) an issue in the service that can make tenant API calls fail in combination with app-only usage
-                            Log.Error("Temp eating exception due to issue in service (December 2016). Exception is {0}.",
+                            Log.Error(Constants.LOGGING_SOURCE,
+                                "Temp eating exception due to issue in service (December 2016). Exception is {0}.",
                                 ex.ToDetailedString());
                         }
                     }
@@ -251,10 +252,17 @@ namespace Microsoft.SharePoint.Client
                             tenant.Context.ExecuteQueryRetry();
                             ret = deletedProperties.Status.Equals(status, StringComparison.OrdinalIgnoreCase);
                         }
-                        catch
+                        catch (Exception innerex)
                         {
                             // eat exception
+                            Log.Info(Constants.LOGGING_SOURCE,
+                                "TenantExtensions::CheckIfSiteExists: failed to check for recycled site: %s",
+                                innerex.ToDetailedString());
                         }
+                    }
+                    else
+                    {
+                        throw;
                     }
                 }
             }
@@ -386,13 +394,16 @@ namespace Microsoft.SharePoint.Client
             var succeeded = false;
             bool ret = false;
 
+            Log.Debug(Constants.LOGGING_SOURCE, "Deleting site {0} in Tenant {1} using the recycle bin {2}", siteFullUrl, tenant.Context.Url, useRecycleBin);
+
+            SpoOperation op = tenant.RemoveSite(siteFullUrl);
             try
             {
-                SpoOperation op = tenant.RemoveSite(siteFullUrl);
                 tenant.Context.Load(tenant);
                 tenant.Context.Load(op, i => i.IsComplete, i => i.PollingInterval);
                 try
                 {
+                    Log.Debug(Constants.LOGGING_SOURCE, "DeleteSiteCollection, ExecuteQueryRetry: RemoveSite({0})", siteFullUrl);
                     tenant.Context.ExecuteQueryRetry();
                 }
                 catch (Exception ex)
@@ -422,6 +433,7 @@ namespace Microsoft.SharePoint.Client
             {
                 if (!useRecycleBin && IsCannotRemoveSiteException(ex))
                 {
+                    Log.Info(Constants.LOGGING_SOURCE, "Not using the recycle bin and site [{0}] does not exist or cannot be removed", siteFullUrl);
                     //eat exception as the site might be in the recycle bin and we allowed deletion from recycle bin
                 }
                 else
@@ -437,7 +449,10 @@ namespace Microsoft.SharePoint.Client
 
             if (succeeded)
             {
-                // To delete Site collection completely, (may take a longer time)
+#if ONPREMISES
+                tenant = new Tenant(tenant.Context);
+#endif
+
                 ret = DeleteSiteCollectionFromRecycleBin(tenant, siteFullUrl, true, timeoutFunction);
             }
             return ret;
@@ -455,6 +470,7 @@ namespace Microsoft.SharePoint.Client
             var ret = true;
             var op = tenant.RemoveDeletedSite(siteFullUrl);
             tenant.Context.Load(op, i => i.IsComplete, i => i.PollingInterval);
+            Log.Debug(Constants.LOGGING_SOURCE, "DeleteSiteCollectionFromRecycleBin, ExecuteQueryRetry: RemoveDeletedSite({0})", siteFullUrl);
             tenant.Context.ExecuteQueryRetry();
             if (timeoutFunction != null)
             {
@@ -555,7 +571,7 @@ namespace Microsoft.SharePoint.Client
             SharingPermissionType? defaultLinkPermission = null,
             SharingLinkType? defaultSharingLinkType = null,
 #endif
-            bool wait = true, Func<TenantOperationMessage, bool> timeoutFunction = null
+ bool wait = true, Func<TenantOperationMessage, bool> timeoutFunction = null
             )
         {
             var siteProps = tenant.GetSitePropertiesByUrl(siteFullUrl, true);
