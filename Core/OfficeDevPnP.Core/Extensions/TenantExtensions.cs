@@ -910,6 +910,7 @@ namespace Microsoft.SharePoint.Client
         }
         #endregion
 
+#if !ONPREMISES
         #region Site Classification configuration
 
         /// <summary>
@@ -983,7 +984,6 @@ namespace Microsoft.SharePoint.Client
 
         #endregion
 
-#if !ONPREMISES
         #region Site groupify
         /// <summary>
         /// Connect an Office 365 group to an existing SharePoint site collection

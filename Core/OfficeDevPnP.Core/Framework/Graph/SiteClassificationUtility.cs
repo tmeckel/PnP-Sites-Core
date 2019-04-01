@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+#if !ONPREMISES
+using Newtonsoft.Json;
 using OfficeDevPnP.Core.Framework.Graph;
 using OfficeDevPnP.Core.Framework.Graph.Model;
 using System;
@@ -47,7 +48,7 @@ namespace OfficeDevPnP.Core.Framework.Graph
         }
 
         /// <summary>
-        /// Enables Site Classifications for the target tenant 
+        /// Enables Site Classifications for the target tenant
         /// </summary>
         /// <param name="accessToken">The OAuth accessToken for Microsoft Graph with Azure AD</param>
         /// <param name="siteClassificationsSettings">The site classifications settings to apply./param>
@@ -65,7 +66,7 @@ namespace OfficeDevPnP.Core.Framework.Graph
         }
 
         /// <summary>
-        /// Enables Site Classifications for the target tenant 
+        /// Enables Site Classifications for the target tenant
         /// </summary>
         /// <param name="accessToken">The OAuth accessToken for Microsoft Graph with Azure AD</param>
         /// <param name="classificationList">The list of classification values</param>
@@ -139,7 +140,7 @@ namespace OfficeDevPnP.Core.Framework.Graph
         }
 
         /// <summary>
-        /// Enables Site Classifications for the target tenant 
+        /// Enables Site Classifications for the target tenant
         /// </summary>
         /// <param name="accessToken">The OAuth accessToken for Microsoft Graph with Azure AD</param>
         /// <returns>The list of Site Classification values</returns>
@@ -270,3 +271,4 @@ namespace OfficeDevPnP.Core.Framework.Graph
         }
     }
 }
+#endif
