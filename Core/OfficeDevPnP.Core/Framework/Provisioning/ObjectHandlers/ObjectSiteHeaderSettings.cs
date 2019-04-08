@@ -18,6 +18,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
 
         public override ProvisioningTemplate ExtractObjects(Web web, ProvisioningTemplate template, ProvisioningTemplateCreationInformation creationInfo)
         {
+#if !ONPREMISES
             using (var scope = new PnPMonitoredScope(this.Name))
             {
                 web.EnsureProperties(w => w.HeaderEmphasis, w => w.HeaderLayout, w => w.MegaMenuEnabled);
@@ -37,7 +38,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                             break;
                         }
                 }
-                
+
                 if(Enum.TryParse<SiteHeaderBackgroundEmphasis>(web.HeaderEmphasis.ToString(),out SiteHeaderBackgroundEmphasis backgroundEmphasis))
                 {
                     header.BackgroundEmphasis = backgroundEmphasis;
@@ -45,10 +46,14 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 template.Header = header;
             }
             return template;
+#else
+            throw new NotImplementedException();
+#endif
         }
 
         public override TokenParser ProvisionObjects(Web web, ProvisioningTemplate template, TokenParser parser, ProvisioningTemplateApplyingInformation applyingInformation)
         {
+#if !ONPREMISES
             using (var scope = new PnPMonitoredScope(this.Name))
             {
                 if (template.Header != null)
@@ -73,6 +78,9 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
             }
 
             return parser;
+#else
+            throw new NotImplementedException();
+#endif
         }
 
         public override bool WillExtract(Web web, ProvisioningTemplate template, ProvisioningTemplateCreationInformation creationInfo)
@@ -88,7 +96,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 return false;
             }
 #else
-            return false
+            return false;
 #endif
         }
 
@@ -106,7 +114,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 return false;
             }
 #else
-            return false
+            return false;
 #endif
         }
     }

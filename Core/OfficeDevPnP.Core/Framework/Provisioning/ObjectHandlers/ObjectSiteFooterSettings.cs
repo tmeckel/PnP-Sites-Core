@@ -25,7 +25,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
 
         public override ProvisioningTemplate ExtractObjects(Web web, ProvisioningTemplate template, ProvisioningTemplateCreationInformation creationInfo)
         {
-
+#if !ONPREMISES
             using (var scope = new PnPMonitoredScope(this.Name))
             {
                 web.EnsureProperties(w => w.FooterEnabled, w => w.ServerRelativeUrl);
@@ -64,8 +64,12 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 template.Footer = footer;
             }
             return template;
+#else
+            throw new NotImplementedException();
+#endif
         }
 
+#if !ONPREMISES
         private SiteFooterLink ParseNodes(MenuNode node, ProvisioningTemplate template, string webServerRelativeUrl)
         {
             var link = new SiteFooterLink();
@@ -82,9 +86,11 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
             }
             return link;
         }
+#endif
 
         public override TokenParser ProvisionObjects(Web web, ProvisioningTemplate template, TokenParser parser, ProvisioningTemplateApplyingInformation applyingInformation)
         {
+#if !ONPREMISES
             using (var scope = new PnPMonitoredScope(this.Name))
             {
                 if (template.Footer != null)
@@ -196,6 +202,9 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
             }
 
             return parser;
+#else
+            throw new NotImplementedException();
+#endif
         }
 
         public override bool WillExtract(Web web, ProvisioningTemplate template, ProvisioningTemplateCreationInformation creationInfo)
@@ -212,7 +221,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 return false;
             }
 #else
-            return false
+            return false;
 #endif
         }
 
@@ -230,7 +239,7 @@ namespace OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers
                 return false;
             }
 #else
-            return false
+            return false;
 #endif
         }
 
