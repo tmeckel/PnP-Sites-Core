@@ -19,7 +19,7 @@ using OfficeDevPnP.Core.Utilities.Async;
 namespace OfficeDevPnP.Core.WebAPI
 {
     /// <summary>
-    /// This class provides helper methods that can be used to protect WebAPI services and to provide a 
+    /// This class provides helper methods that can be used to protect WebAPI services and to provide a
     /// way to reinstantiate a contextobject in the service call.
     /// </summary>
     public static class WebAPIHelper
@@ -66,9 +66,9 @@ namespace OfficeDevPnP.Core.WebAPI
         }
 
         /// <summary>
-        /// Creates a ClientContext token for the incoming WebAPI request. This is done by 
+        /// Creates a ClientContext token for the incoming WebAPI request. This is done by
         /// - looking up the servicesToken
-        /// - extracting the cacheKey 
+        /// - extracting the cacheKey
         /// - get the AccessToken from cache. If the AccessToken is expired a new one is requested using the refresh token
         /// - creation of a ClientContext object based on the AccessToken
         /// </summary>
@@ -93,16 +93,16 @@ namespace OfficeDevPnP.Core.WebAPI
                     cacheItem.AccessToken = accessToken;
                     //update the cache
                     WebAPIContextCache.Instance.Put(cacheKey, cacheItem);
-                    Log.Info(CoreResources.Services_TokenRefreshed, cacheKey, cacheItem.SharePointServiceContext.HostWebUrl);
+                    Log.Info(Constants.LOGGING_SOURCE, CoreResources.Services_TokenRefreshed, cacheKey, cacheItem.SharePointServiceContext.HostWebUrl);
                 }
-                 
+
                 return TokenHelper.GetClientContextWithAccessToken(cacheItem.SharePointServiceContext.HostWebUrl, cacheItem.AccessToken.AccessToken);
             }
             else
             {
                 Log.Warning(Constants.LOGGING_SOURCE, CoreResources.Services_CookieWithCachKeyNotFound);
                 throw new Exception("The cookie with the cachekey was not found...nothing can be retrieved from cache, so no clientcontext can be created.");
-            }            
+            }
         }
 
         /// <summary>
@@ -132,7 +132,7 @@ namespace OfficeDevPnP.Core.WebAPI
         /// <summary>
         /// This method needs to be called from a code behind of the SharePoint app startup page (default.aspx). It registers the calling
         /// SharePoint app by calling a specific "Register" api in your WebAPI service.
-        /// 
+        ///
         /// Note:
         /// Given that method is async you'll need to add the  Async="true" page directive to the page that uses this method.
         /// </summary>
@@ -143,7 +143,7 @@ namespace OfficeDevPnP.Core.WebAPI
         {
             if (page == null)
                 throw new ArgumentNullException("page");
-            
+
             if (string.IsNullOrEmpty(apiRequest))
                 throw new ArgumentNullException("apiRequest");
 
@@ -167,7 +167,7 @@ namespace OfficeDevPnP.Core.WebAPI
                         cacheKey = (string)dict["CacheKey"];
                     }
 
-                    // Remove special chars (=, +, /, {}) from cachekey as there's a flaw in CookieHeaderValue when the 
+                    // Remove special chars (=, +, /, {}) from cachekey as there's a flaw in CookieHeaderValue when the
                     // cookie is read. This flaw replaces special chars with a space.
                     cacheKey = RemoveSpecialCharacters(cacheKey);
 
@@ -189,7 +189,7 @@ namespace OfficeDevPnP.Core.WebAPI
                     {
                         Value = cacheKey,
                         Secure = true,
-                        HttpOnly = httpOnly,                        
+                        HttpOnly = httpOnly,
                     };
 
                     page.Response.AppendCookie(cookie);
@@ -216,11 +216,11 @@ namespace OfficeDevPnP.Core.WebAPI
 
                         if (!response.IsSuccessStatusCode)
                         {
-                            Log.Error(CoreResources.Service_RegistrationFailed, apiRequest, serviceEndPoint.ToString(), cacheKey);
+                            Log.Error(Constants.LOGGING_SOURCE, CoreResources.Service_RegistrationFailed, apiRequest, serviceEndPoint.ToString(), cacheKey);
                             throw new Exception(String.Format("Service registration failed: {0}", response.StatusCode));
                         }
 
-                        Log.Info(CoreResources.Services_Registered, apiRequest, serviceEndPoint.ToString(), cacheKey);
+                        Log.Info(Constants.LOGGING_SOURCE, CoreResources.Services_Registered, apiRequest, serviceEndPoint.ToString(), cacheKey);
 
                     }
                 }
@@ -230,7 +230,7 @@ namespace OfficeDevPnP.Core.WebAPI
         /// <summary>
         /// This method needs to be called from a code behind of the SharePoint app startup page (default.aspx). It registers the calling
         /// SharePoint app by calling a specific "Register" api in your WebAPI service.
-        /// 
+        ///
         /// Note:
         /// Given that method is async you'll need to add the  Async="true" page directive to the page that uses this method.
         /// </summary>
@@ -266,7 +266,7 @@ namespace OfficeDevPnP.Core.WebAPI
                         cacheKey = (string)dict["CacheKey"];
                     }
 
-                    // Remove special chars (=, +, /, {}) from cachekey as there's a flaw in CookieHeaderValue when the 
+                    // Remove special chars (=, +, /, {}) from cachekey as there's a flaw in CookieHeaderValue when the
                     // cookie is read. This flaw replaces special chars with a space.
                     cacheKey = RemoveSpecialCharacters(cacheKey);
 
