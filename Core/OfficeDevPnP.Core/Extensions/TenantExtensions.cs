@@ -64,7 +64,7 @@ namespace Microsoft.SharePoint.Client
                     {
                         // Context connection gets closed after action completed.
                         // Calling ExecuteQuery again returns an error which can be ignored
-                        Log.Warning(CoreResources.TenantExtensions_ClosedContextWarning, webEx.Message);
+                        Log.Warning("TenantExtensions", CoreResources.TenantExtensions_ClosedContextWarning, webEx.Message);
                     }
                 }
             }
@@ -81,7 +81,6 @@ namespace Microsoft.SharePoint.Client
             engine.ApplyProvisioningHierarchy(tenant, hierarchy, sequenceId, applyingInformation);
         }
 #endif
-
         #endregion
 
         #region Site collection creation
@@ -300,7 +299,7 @@ namespace Microsoft.SharePoint.Client
                     return false;
                 }
 
-                Log.Error(CoreResources.TenantExtensions_UnknownExceptionAccessingSite, ex.Message);
+                Log.Error("TenantExtensions", CoreResources.TenantExtensions_UnknownExceptionAccessingSite, ex.Message);
                 throw;
             }
         }
@@ -571,8 +570,8 @@ namespace Microsoft.SharePoint.Client
             SharingPermissionType? defaultLinkPermission = null,
             SharingLinkType? defaultSharingLinkType = null,
 #endif
- bool wait = true, Func<TenantOperationMessage, bool> timeoutFunction = null
-            )
+            bool wait = true,
+            Func<TenantOperationMessage, bool> timeoutFunction = null)
         {
             var siteProps = tenant.GetSitePropertiesByUrl(siteFullUrl, true);
             tenant.Context.Load(siteProps);
@@ -635,7 +634,7 @@ namespace Microsoft.SharePoint.Client
             tenant.Context.Load(siteProps);
             tenant.Context.ExecuteQueryRetry();
 
-            Log.Info(CoreResources.TenantExtensions_SetLockState, siteProps.LockState, lockState);
+            Log.Info(Constants.LOGGING_SOURCE, CoreResources.TenantExtensions_SetLockState, siteProps.LockState, lockState);
 
             if (siteProps.LockState != lockState.ToString())
             {
